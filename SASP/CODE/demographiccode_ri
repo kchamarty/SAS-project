@@ -1,0 +1,110 @@
+/*Create a library to the project folder*/
+LIBNAME project 'C:\Users\ratin\Documents\DataScience\SAS final Project\Final Project\Project Data Files\3. Demographic Profile Analysis';
+
+/*Selecting the variables identified in the study framework */
+PROC SQL;
+  CREATE TABLE project.demographic AS
+    SELECT ID,PNUM,REGION,Q2P2,Q2P5B,Q2P6,AGE,AGECAT,Q2P16,Q2P13M1,Q2P14,Q2P17,Q217B,Q4P42,Q4P4A,Q4P4B,Q4P4C,Q4P4D,Q4P4E,Q4P4F,Q4P4G
+	FROM project.Project2;
+QUIT;
+/*Convert the numeric variables to categorical*/
+/*Create the target variable. If the person has answered yes to any of the question Q4P42 to Q4P4G then the person is Disabled.*/
+
+DATA project.Demographic;
+  SET project.Demographic(RENAME=(AGECAT=C_AGECAT
+								  REGION=C_REGION
+								  Q2P5B=C_Q2P5B
+								  Q2P6=C_Q2P6
+								  Q2P16=C_Q2P16
+								  Q2P13M1=C_Q2P13M1
+								  Q2P14=C_Q2P14
+								  Q2P17=C_Q2P17
+								  Q217B=C_Q217B));
+  AGECAT=PUT(C_AGECAT,$1.);
+  REGION=PUT(C_REGION,$1.);
+  Q2P5B=PUT(C_Q2P5B,$2.);
+  Q2P6=PUT(C_Q2P6,$1.);
+  Q2P16=PUT(C_Q2P16,$1.);
+  Q2P13M1=PUT(C_Q2P13M1,$1.);
+  Q2P14=PUT(C_Q2P14,$1.);
+  Q2P17=PUT(C_Q2P17,$2.);
+  Q217B=PUT(C_Q217B,$1.);
+  DROP C_:;
+  IF Q4P42 OR Q4P4A OR Q4P4B OR Q4P4C OR Q4P4D OR Q4P4E OR Q4P4F OR Q4P4G THEN DISABLE=1;
+  ELSE DISABLE=0;
+RUN;
+
+/*Export the file to excel to cross check the results*/
+PROC EXPORT DATA= PROJECT.Demographic 
+            OUTFILE= "C:\Users\ratin\Documents\DataScience\SAS final Project\Final Project\Project Data Files\3. Demographic Profile Analysis\demographic.XLSX" 
+            DBMS=xlsx REPLACE;
+     SHEET="demographic"; 
+RUN;
+TITLE;
+/*Getting to know the data*/
+PROC CONTENTS DATA=project.Demographic;
+RUN;
+
+PROC PRINT DATA=project.Demographic (OBS=10);
+RUN;
+
+/*Finding the total number of Disabled people*/
+PROC MEANS DATA=project.Demographic SUM;
+  VAR Disable;
+RUN;
+
+/*Univariate Analysis of AGECAT */
+PROC FREQ DATA=project.Demographic;
+  WHERE Disable=1;
+  TABLE agecat;
+RUN;
+
+ODS GRAPHICS ON;
+proc registry list
+ startat="COLORNAMES";
+run;
+TITLE "Age Distribution of Disabled and General population";
+PROC SGPLOT DATA=project.demographic;
+  XAXIS VALUES=(0 TO 110 BY 10) LABEL="AGE-GROUP";
+  YAXIS MINOR MINORCOUNT=4;
+  HISTOGRAM age/ GROUP=DISABLE 
+				 TRANSPARENCY=0.5 
+                 BINWIDTH=10 
+                 BINSTART=5 
+                 SHOWBINS
+  				 DATALABEL=PERCENT
+                 DATALABELATTRS=(Color=BLACK Family=Arial Size=8 Style=Italic Weight=Bold)
+                 DATASKIN=GLOSS;
+  DENSITY age/ GROUP=DISABLE;
+  KEYLEGEND / ACROSS=1 POSITION=TopRight LOCATION=Inside;
+RUN;
+
+/*Bivariate Analysis of AGECAT & Disability*/
+PROC FREQ DATA=project.demographic;
+  TABLE agecat*disable;
+RUN;
+TITLE "Bivariate study of age category and Disability status";
+PROC SGPLOT DATA=project.demographic;
+  VBAR AGECAT/GROUP=DISABLE 
+              GROUPDISPLAY=STACK 
+			  DATALABEL
+			  SEGLABEL
+			  SEGLABELFITPOLICY=NOCLIP
+              DATASKIN=GLOSS
+              STAT=PERCENT;
+  XAXIS VALUES=("1" "2" "3" "4" "5" "6" "7" "8" "9")
+        VALUESDISPLAY=("0-9" "10-19" "20-29" "30-39" "40-49" "50-59" "60-69" "70-79" "80 above");
+RUN;
+
+
+
+
+
+
+
+
+
+
+
+
+
