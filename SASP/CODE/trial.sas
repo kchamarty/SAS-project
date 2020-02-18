@@ -127,10 +127,10 @@ RUN;
 
 PROC SQL;
 CREATE TABLE SASPDATA.HOUSING2_ADULTINCOME AS
-SELECT 	AVG(HHinc) AS AVGHHINC/*HOUSE HOLD INCOME AVERAGE */
+SELECT 	HHINC/*HOUSE HOLD INCOME AVERAGE */
 		, PEOPL - CHLDRN_LT_20 AS ADULTS/*NUMBER OF PEOPLE */ 
 FROM SASPDATA.HOUSING2
-group by ADULTS
+
 ;
 QUIT;
 
@@ -141,3 +141,30 @@ FROM SASPDATA.HOUSING1_S
 GROUP BY ID
 ;
 quit;
+
+/*Transformation of code into categorical columns*/
+
+data SASPDATA.HOUSING3;
+	length Age_Catg  $11;
+	length HHINC_Catg $9.;
+	set SASPDATA.HOUSING2;
+
+	select;
+		when (0  <=AVG_AGE <=20) Age_Catg='Age :  <20';
+		when (21 <=AVG_AGE <=30) Age_Catg='Age : 21-30';
+		when (31 <=AVG_AGE <=40) Age_Catg='Age : 31-40';
+		when (41 <=AVG_AGE <=50) Age_Catg='Age : 41-50';
+		when (51 <=AVG_AGE <=60) Age_Catg='Age : 51-60';
+		when (61 <=AVG_AGE <=80) Age_Catg='Age : 61-80';
+		otherwise Age_Catg='Age : >80';
+	end;
+	select;
+		when (0  <=HHINC <20000) HHINC_Catg=' <20k ';
+		when (20000 <=HHINC <40000) HHINC_Catg='20-40k';
+		when (40000 <=HHINC <60000) HHINC_Catg='40-60k';
+		when (60000 <=HHINC <80000) HHINC_Catg='60-80k';
+		when (80000 <=HHINC <100000) HHINC_Catg='80-100k';
+		when (100000 <=HHINC <150000) HHINC_Catg='100-150k';
+		otherwise HHINC=' >150k ';
+	end;
+run;

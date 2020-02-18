@@ -231,39 +231,12 @@ TITLE "SUMMARY OF FINAL DATA AT HOUSEHOLD LEVEL";
 PROC MEANS DATA = SASPDATA.HOUSING2_NOOUT NMISS N MIN MEAN MEDIAN MAX MODE;
 RUN;
 
-/*Transformation of code into categorical columns*/
 
-data SASPDATA.HOUSING3;
-	length Age_Catg  $11;
-	length HHINC_Catg $9.;
-	set SASPDATA.HOUSING2;
-
-	select;
-		when (0  <=AVG_AGE <=20) Age_Catg='Age :  <20';
-		when (21 <=AVG_AGE <=30) Age_Catg='Age : 21-30';
-		when (31 <=AVG_AGE <=40) Age_Catg='Age : 31-40';
-		when (41 <=AVG_AGE <=50) Age_Catg='Age : 41-50';
-		when (51 <=AVG_AGE <=60) Age_Catg='Age : 51-60';
-		when (61 <=AVG_AGE <=80) Age_Catg='Age : 61-80';
-		otherwise Age_Catg='Age : >80';
-	end;
-	select;
-		when (0  <=HHINC <20000) HHINC_Catg=' <20k ';
-		when (20000 <=HHINC <40000) HHINC_Catg='20-40k';
-		when (40000 <=HHINC <60000) HHINC_Catg='40-60k';
-		when (60000 <=HHINC <80000) HHINC_Catg='60-80k';
-		when (80000 <=HHINC <100000) HHINC_Catg='80-100k';
-		when (100000 <=HHINC <150000) HHINC_Catg='100-150k';
-		otherwise HHINC=' >150k ';
-	end;
-run;
 
 PROC CONTENTS DATA=SASPDATA.HOUSING2;RUN;
 
 /***********************************************************************************/
 /*****************---------UNIVARIATE ANALYSIS-----------***********/
-
-
 
 
 /***********************--- HISTOGRAM OF AGE---***************/
@@ -410,8 +383,10 @@ run;
 /***************---DISTRIBUTION OF Income and number of People----********************/
 title 'Income vs Number of people';
 
-proc sgplot data=SASPDATA.HOUSING2_ADULTINCOME;
-	vbar HouseHold_Income / group=ADULTS groupdisplay=cluster;
+proc sgplot data=SASPDATA.HOUSING2;
+	vbar PEOPL / CATEGORYORDER=RESPDESC  group=HouseHold_Income groupdisplay=cluster 
+		fillattrs=(transparency=0.25) datalabel dataskin=crisp;
+	xaxis valuesrotate=diagonal;
 	yaxis grid;
 run;
 
@@ -423,9 +398,19 @@ PROC SORT DATA=SASPDATA.HOUSING2_NOOUT OUT=SASPDATA.HOUSING2_NOOUT_S;
 BY OWNS_HOUSE;
 RUN;
 
-PROC SURVEYSELECT DATA=SASPDATA.HOUSING2_NOOUT_S 
-	out =SASPDATA.HOUSING2_TRAIN(DROP=SelectionProb	SamplingWeight Total AllocProportion 
-	SampleSize ActualProportion) 
+/* RUNNING THE LOGISTIC REGRESSION */
+proc stdize data=SASPDATA.HOUSING2_NOOUT_S 
+		method=std nomiss 
+		out=SASPDATA.HOUSING_STD oprefix sprefix=Std_;
+	var HHINC PEOPL AVG_EDU_LVL AVG_AGE CHLDRN_LT_20  
+	NUM_YEARS_US NUM_JOBS_HHLD;
+run;
+
+
+PROC SURVEYSELECT DATA=SASPDATA.HOUSING_STD
+	out =SASPDATA.HOUSING2_TRAIN
+	(DROP=SelectionProb	SamplingWeight Total 
+	AllocProportion SampleSize ActualProportion) 
 	method =srs samprate=.75 SEED=1234567;
 	STRATA OWNS_HOUSE / alloc=prop;
 RUN;
@@ -439,12 +424,6 @@ RUN;
 
 
 
-/* RUNNING THE LOGISTIC REGRESSION */
-proc stdize data=SASPDATA.HOUSING2_NOOUT method=std nomiss 
-		out=SASPDATA.HOUSING_STD oprefix sprefix=Std_;
-	var HHINC PEOPL AVG_EDU_LVL AVG_AGE CHLDRN_LT_20  NUM_YEARS_US 
-		NUM_JOBS_HHLD;
-run;
 
 proc logistic data=SASPDATA.HOUSING_STD;
 	model OWNS_HOUSE(event='1')=NUM_IN_ARMY Std_PEOPL Std_HHINC Std_AVG_EDU_LVL 
@@ -467,7 +446,7 @@ DATA SASPDATA.HOUSING_PREDICT;
   				
 RUN;
 
-
+PROC MEANS DATA= SASPDATA.HOUSING_PREDICT;RUN;
 
 DATA SASPDATA.HOUSING_CLASSIFICATION;
 	SET  SASPDATA.HOUSING_PREDICT;
@@ -487,27 +466,10 @@ run;
 
 
   				
-PROC MEANS DATA= SASPDATA.HOUSING_PREDICT;RUN;
+
 PROC MEANS DATA= SASPDATA.HOUSING_CLASSIFICATION;RUN;
 
   				
-  				
-  				
-/*  */
-/* Intercept	1	1.3270	0.0378	1234.1196	<.0001 */
-/* Std_PEOPL	1	0.2805	0.0365	58.9150	<.0001 */
-/* Std_HHINC	1	1.3499	0.0638	447.2344	<.0001 */
-/* Std_AVG_AGE	1	0.4842	0.0975	24.6354	<.0001 */
-/* Std_NUM_YEARS_US	1	0.5997	0.0982	37.3004	<.0001 */
-/* Std_NUM_JOBS_HHLD	1	0.2862	0.0395	52.5226	<.0001 */
-/* ntercept	1	-4.0983	0.1609	648.6011	<.0001 */
-/* PEOPL	1	0.1898	0.0247	58.9150	<.0001 */
-/* HHINC	1	0.000028	1.333E-6	447.2344	<.0001 */
-/* AVG_AGE	1	0.0299	0.00602	24.6354	<.0001 */
-/* NUM_YEARS_US	1	0.0351	0.00575	37.3004	<.0001 */
-/* NUM_JOBS_HHLD	1	0.2384	0.0329	52.5226	<.0001 */
-
-
 
 
 
