@@ -11,7 +11,7 @@ proc transpose data=saspdata.quiz_01_S  out=saspdata.quiz_01_T(DROP=_name_) pref
 	
 run;
 
-PROC SURVEYSELECT data=sashelp.cars out =saspdata.sampledata outall method =srs samprate=.8;
+PROC SURVEYSELECT data=sashelp.cars out =saspdata. outall method =srs samprate=.8;
 /* sampsize= 30; */
 strata origin;
 run;
